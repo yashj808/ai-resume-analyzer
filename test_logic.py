@@ -1,49 +1,44 @@
 from resume_checker import analyze_resume
 
 def test_logic():
-    # Test Case 1: Simple Resume (No LinkedIn)
-    print("Test 1: Simple Resume (No LinkedIn)")
-    res = analyze_resume("I know Python and SQL", "Python, SQL, Java")
-    print(f"Score: {res['resume_score']}%, Match: {res['match_score']}%")
-    print(f"Skills: {res['skills']}")
-    
-    # Test Case 2: Resume + LinkedIn (New Skills)
-    print("\nTest 2: Resume + LinkedIn (New Skills)")
-    pdl_data = {
-        "data": {
-            "full_name": "Test User",
-            "headline": "Python Developer",
-            "skills": ["Java", "C++"],
-            "experience": [{"description": "Worked with TensorFlow"}],
-            "education": [{"major": "Machine Learning"}]
-        }
-    }
-    # Resume has Python, LinkedIn adds Java, C++, TensorFlow, Machine Learning
-    # unique_li_skills = [Java, C++, TensorFlow, Machine Learning] -> 4 skills -> +20 bonus
-    # Original resume score: 10 (Python) -> 10 + 20 = 30
-    res = analyze_resume("I know Python", "Python, Java, C++, TensorFlow", pdl_data)
-    print(f"Score: {res['resume_score']}% (Expected: 30%)")
-    print(f"Match: {res['match_score']}%")
-    print(f"Skills: {res['skills']}")
-    
-    # Test Case 3: API Error Handling
-    print("\nTest 3: API Error Handling")
-    pdl_error = {"error": "Profile not found"}
-    res = analyze_resume("I know Python", "Python", pdl_error)
-    print(f"Error: {res['linkedin_error']}")
-    print(f"Score: {res['resume_score']}%")
+    print("--- Test 1: Full Match ---")
+    res1 = analyze_resume(
+        resume_text="Experienced in Python, SQL, Docker, and AWS.",
+        job_desc="We need skills in Python, SQL, Docker, and AWS."
+    )
+    print(f"Resume Score: {res1['resume_score']}%, Match: {res1['match_score']}%")
+    print(f"Matched Skills: {res1['skills']}")
+    print(f"Missing: {res1['missing']}")
+    assert res1['match_score'] == 100
+    assert len(res1['missing']) == 0
 
-    # Test Case 4: Max Bonus Cap
-    print("\nTest 4: Max Bonus Cap")
-    pdl_many_skills = {
-        "data": {
-            "skills": ["Python", "SQL", "Java", "C++", "AWS", "Docker", "Kubernetes"]
-        }
-    }
-    res = analyze_resume("I know Python", "Python", pdl_many_skills)
-    # unique = [SQL, Java, C++, AWS, Docker, Kubernetes] -> 6 skills -> +30 bonus -> capped at +20
-    # Original: 10 -> 10 + 20 = 30
-    print(f"Score: {res['resume_score']}% (Expected: 30%)")
+    print("\n--- Test 2: Partial Match & Missing Skills ---")
+    res2 = analyze_resume(
+        resume_text="Junior developer skilled in Python, JavaScript, and HTML.",
+        job_desc="Required: Python, React, TypeScript, Docker, and Kubernetes."
+    )
+    print(f"Resume Score: {res2['resume_score']}%, Match: {res2['match_score']}%")
+    print(f"Matched Skills: {res2['skills']}")
+    print(f"Missing: {res2['missing']}")
+    print(f"Radar labels: {res2['radar_labels']}")
+    assert "python" in res2['skills']
+    assert "react" in res2['missing']
+    assert "typescript" in res2['missing']
+
+    print("\n--- Test 3: Substring Collisions (java vs javascript) ---")
+    res3 = analyze_resume(
+        resume_text="Proficient in JavaScript and Django.",
+        job_desc="Looking for Java, Go, and C++."
+    )
+    # Javascript should NOT match Java! Django should NOT match Go!
+    print(f"Matched Skills: {res3['skills']}")
+    print(f"All resume skills: {res3['all_resume_skills']}")
+    assert "java" not in res3['all_resume_skills']
+    assert "go" not in res3['all_resume_skills']
+    assert "javascript" in res3['all_resume_skills']
+    print("[PASS] Substring collision checks passed!")
+
+    print("\nAll tests passed successfully!")
 
 if __name__ == "__main__":
     test_logic()

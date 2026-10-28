@@ -4,12 +4,15 @@
     --primary: #6366f1;
     --primary-hover: #4f46e5;
     --secondary: #334155;
-    --linkedin: #0a66c2;
     --text-main: #f8fafc;
     --text-muted: #94a3b8;
     --success: #10b981;
     --error: #ef4444;
     --gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+}
+
+html {
+    scroll-behavior: smooth;
 }
 
 * {
@@ -56,10 +59,12 @@ body {
     text-align: center;
     background: radial-gradient(circle at top right, #1e1b4b, transparent), 
                 radial-gradient(circle at bottom left, #1e1b4b, transparent);
+    padding-bottom: 60px;
 }
 
 .hero {
     max-width: 800px;
+    margin-top: 40px;
 }
 
 .badge {
@@ -96,6 +101,44 @@ h1 {
     display: flex;
     gap: 16px;
     justify-content: center;
+}
+
+/* FEATURES SECTION */
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+    margin-top: 70px;
+    width: 100%;
+    max-width: 1000px;
+    text-align: left;
+}
+
+.feature-item {
+    padding: 24px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.feature-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.5);
+}
+
+.feature-icon {
+    font-size: 2rem;
+    margin-bottom: 12px;
+}
+
+.feature-item h3 {
+    font-size: 1.15rem;
+    margin-bottom: 8px;
+    color: var(--text-main);
+}
+
+.feature-item p {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    line-height: 1.5;
 }
 
 /* BUTTONS */
@@ -188,8 +231,8 @@ textarea, input[type="text"], input[type="file"] {
 }
 
 textarea {
-    height: 120px;
-    resize: none;
+    height: 140px;
+    resize: vertical;
 }
 
 input:focus, textarea:focus {
@@ -228,23 +271,37 @@ input:focus, textarea:focus {
     display: flex;
     flex-direction: column;
     align-items: center;
+    text-align: center;
 }
 
-.score-display {
+/* CIRCULAR SCORE METER */
+.score-circle {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: conic-gradient(var(--primary) calc(var(--score, 0) * 1%), rgba(255, 255, 255, 0.08) 0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 20px auto;
     position: relative;
-    width: 200px;
-    height: 100px;
-    margin: 20px 0;
+    box-shadow: 0 0 25px rgba(99, 102, 241, 0.25);
+}
+
+.score-circle-inner {
+    width: 116px;
+    height: 116px;
+    border-radius: 50%;
+    background: #1e293b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .score-value {
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 2.5rem;
+    font-size: 2.25rem;
     font-weight: 800;
-    color: var(--primary);
+    color: var(--text-main);
 }
 
 .match-bar-container {
@@ -263,6 +320,7 @@ input:focus, textarea:focus {
     height: 100%;
     background: var(--gradient);
     border-radius: 10px;
+    transition: width 1s ease-in-out;
 }
 
 .match-text {
@@ -279,40 +337,15 @@ input:focus, textarea:focus {
 }
 
 .tag {
-    padding: 4px 12px;
+    padding: 6px 14px;
     border-radius: 20px;
     font-size: 14px;
     font-weight: 600;
 }
 
-.tag-match { background: rgba(16, 185, 129, 0.1); color: var(--success); }
-.tag-missing { background: rgba(239, 68, 68, 0.1); color: var(--error); }
-.tag-linkedin { background: rgba(10, 102, 194, 0.1); color: var(--linkedin); }
-
-/* LINKEDIN CARD */
-.li-profile-header {
-    display: flex;
-    gap: 16px;
-    margin-bottom: 16px;
-}
-
-.li-icon {
-    width: 48px;
-    height: 48px;
-    background: var(--linkedin);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 800;
-    font-size: 24px;
-}
-
-.li-info span {
-    display: block;
-    font-size: 14px;
-    color: var(--text-muted);
-}
+.tag-match { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+.tag-missing { background: rgba(239, 68, 68, 0.15); color: var(--error); }
+.tag-none { background: rgba(148, 163, 184, 0.15); color: var(--text-muted); }
 
 /* SUGGESTIONS */
 .suggestion-list {
@@ -323,11 +356,13 @@ input:focus, textarea:focus {
 
 .suggestion-item {
     background: rgba(255, 255, 255, 0.03);
-    padding: 12px;
+    padding: 14px;
     border-radius: 8px;
     display: flex;
     gap: 12px;
     font-size: 14px;
+    line-height: 1.4;
+    border-left: 3px solid var(--primary);
 }
 
 .dot {
@@ -338,8 +373,6 @@ input:focus, textarea:focus {
     flex-shrink: 0;
     margin-top: 6px;
 }
-
-.li-sug { border-left: 3px solid var(--linkedin); }
 
 /* LOADER */
 #loading-overlay {
@@ -372,4 +405,5 @@ input:focus, textarea:focus {
     h1 { font-size: 2.5rem; }
     .hero-actions { flex-direction: column; }
     .dashboard-grid { grid-template-columns: 1fr; }
+    .features-grid { grid-template-columns: 1fr; }
 }

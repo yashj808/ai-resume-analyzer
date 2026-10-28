@@ -1,8 +1,43 @@
+import re
 import traceback
 
-def analyze_resume(resume, job_desc, pdl_data=None):
+SKILLS_DB = [
+    # Programming Languages
+    "python", "javascript", "typescript", "java", "c++", "c#", "c", "go", "rust",
+    "ruby", "php", "swift", "kotlin", "scala", "r", "dart",
+    
+    # Web & Frameworks
+    "html", "css", "react", "angular", "vue", "node.js", "express", "django",
+    "flask", "fastapi", "spring boot", "next.js", "tailwind", "bootstrap",
+    
+    # Databases & Storage
+    "sql", "nosql", "postgresql", "mysql", "mongodb", "redis", "sqlite",
+    "oracle", "cassandra", "dynamodb",
+    
+    # Data Science & Machine Learning
+    "machine learning", "deep learning", "artificial intelligence", "nlp",
+    "computer vision", "pandas", "numpy", "scikit-learn", "tensorflow",
+    "pytorch", "keras", "data analysis",
+    
+    # Cloud, DevOps & Tools
+    "aws", "azure", "gcp", "docker", "kubernetes", "git", "github",
+    "gitlab", "ci/cd", "jenkins", "linux", "terraform", "rest api", "graphql"
+]
+
+def extract_skills(text, skills_list):
+    if not text:
+        return []
+    text_padded = f" {text.lower()} "
+    found = []
+    for skill in skills_list:
+        pattern = r'(?<![a-zA-Z0-9_#+])' + re.escape(skill.lower()) + r'(?![a-zA-Z0-9_#+])'
+        if re.search(pattern, text_padded):
+            found.append(skill)
+    return sorted(list(set(found)))
+
+def analyze_resume(resume_text, job_desc):
     try:
-        return _analyze_logic(resume, job_desc, pdl_data)
+        return _analyze_logic(resume_text, job_desc)
     except Exception as e:
         error_msg = f"Error in analyze_resume: {str(e)}\n{traceback.format_exc()}"
         with open("api_debug.log", "a") as f:
@@ -11,131 +46,65 @@ def analyze_resume(resume, job_desc, pdl_data=None):
             "resume_score": 0,
             "match_score": 0,
             "skills": [],
+            "all_resume_skills": [],
             "missing": [],
-            "linkedin_profile": None,
-            "linkedin_skills": [],
-            "linkedin_suggestions": [f"Error during analysis: {str(e)}"],
-            "linkedin_error": str(e)
+            "suggestions": [f"Error during analysis: {str(e)}"],
+            "radar_labels": ["Technical Skills", "Tools", "Problem Solving", "Architecture", "Testing"],
+            "radar_values": [30, 30, 30, 30, 30]
         }
 
-def _analyze_logic(resume, job_desc, pdl_data=None):
-    resume = resume.lower() if resume else ""
-    job_desc = job_desc.lower() if job_desc else ""
+def _analyze_logic(resume_text, job_desc):
+    resume_skills = extract_skills(resume_text, SKILLS_DB)
+    job_skills = extract_skills(job_desc, SKILLS_DB)
 
-    skills_db = [
-        "python","machine learning","sql","tensorflow","pandas",
-        "numpy","java","c++","aws","docker","kubernetes"
-    ]
+    matched = [skill for skill in job_skills if skill in resume_skills]
+    missing = [skill for skill in job_skills if skill not in resume_skills]
 
-    resume_skills = [skill for skill in skills_db if skill in resume]
-    job_skills = [skill for skill in skills_db if skill in job_desc]
-
-    # -------- BRIGHT DATA PROCESSING --------
-    linkedin_skills = []
-    linkedin_profile = None
-    linkedin_suggestions = []
-    linkedin_error = None
-
-    if pdl_data:
-        # Bright Data often returns a list
-        if isinstance(pdl_data, list) and len(pdl_data) > 0:
-            data = pdl_data[0]
-        elif isinstance(pdl_data, dict):
-            if "error" in pdl_data:
-                linkedin_error = pdl_data["error"]
-                data = None
-            else:
-                data = pdl_data
-        else:
-            data = None
-
-        if data and isinstance(data, dict):
-            # Profile Info
-            linkedin_profile = {
-                "name": data.get("name") or f"{data.get('first_name', '')} {data.get('last_name', '')}".strip(),
-                "headline": data.get("headline"),
-                "title": data.get("current_company_position") or (data.get("experience", [{}])[0].get("title") if data.get("experience") else None),
-                "company": data.get("current_company_name") or (data.get("experience", [{}])[0].get("company") if data.get("experience") else None),
-                "location": data.get("location") or data.get("city")
-            }
-
-            # Skills Extraction
-            raw_li_skills = data.get("skills", [])
-            if raw_li_skills and isinstance(raw_li_skills, list) and len(raw_li_skills) > 0:
-                if isinstance(raw_li_skills[0], dict):
-                    raw_li_skills = [s.get("name") for s in raw_li_skills if isinstance(s, dict) and s.get("name")]
-
-            # Experience Keyword Mining
-            experience = data.get("experience", [])
-            if isinstance(experience, list):
-                for exp in experience:
-                    if not isinstance(exp, dict): continue
-                    desc = exp.get("description", "")
-                    title = exp.get("title", "")
-                    if desc:
-                        for s in skills_db:
-                            if s in desc.lower():
-                                raw_li_skills.append(s)
-                    if title:
-                        for s in skills_db:
-                            if s in title.lower():
-                                raw_li_skills.append(s)
-            
-            # Education Keyword Mining
-            education = data.get("education", [])
-            if isinstance(education, list):
-                for edu in education:
-                    if not isinstance(edu, dict): continue
-                    field = edu.get("field_of_study") or edu.get("degree")
-                    if field:
-                        for s in skills_db:
-                            if s in field.lower():
-                                raw_li_skills.append(s)
-
-            # Deduplicate and filter by skills_db
-            linkedin_skills = sorted(list(set([s.lower() for s in raw_li_skills if s and isinstance(s, str) and s.lower() in skills_db])))
-
-            # Suggestions
-            if not data.get("headline"):
-                linkedin_suggestions.append("Improve your LinkedIn headline to be more descriptive.")
-            if not data.get("about") and not data.get("summary"):
-                linkedin_suggestions.append("Add an 'About' section to your LinkedIn profile.")
-            
-            skills_list = data.get("skills", [])
-            if isinstance(skills_list, list) and len(skills_list) < 5:
-                linkedin_suggestions.append("Add more skills to your LinkedIn profile.")
-            
-            if not experience:
-                linkedin_suggestions.append("Add work history to your LinkedIn profile.")
-
-    # -------- MERGE SKILLS --------
-    merged_skills = sorted(list(set(resume_skills + linkedin_skills)))
-
-    matched = [skill for skill in job_skills if skill in merged_skills]
-    missing = [skill for skill in job_skills if skill not in merged_skills]
-
-    # -------- SCORING --------
-    if len(job_skills) > 0:
+    # Calculate match score
+    if job_skills:
         match_score = int((len(matched) / len(job_skills)) * 100)
     else:
-        match_score = 0
+        match_score = 100 if resume_skills else 0
 
-    unique_li_skills = [s for s in linkedin_skills if s not in resume_skills]
-    linkedin_bonus = min(len(unique_li_skills) * 5, 20)
+    # Calculate overall resume strength score
+    if resume_skills:
+        skill_breadth_score = min(len(resume_skills) * 10, 60)
+        match_component = int(match_score * 0.4)
+        resume_score = min(skill_breadth_score + match_component, 100)
+    else:
+        resume_score = 0
 
-    resume_score = min((len(resume_skills) * 10) + linkedin_bonus, 100)
+    # Actionable suggestions
+    suggestions = []
+    for m in missing[:4]:
+        suggestions.append(f"Consider adding '{m.title()}' to your skills or project descriptions.")
 
-    for m in missing[:3]:
-        if m not in linkedin_skills:
-            linkedin_suggestions.append(f"Consider adding '{m.upper()}' to your LinkedIn skills.")
+    if len(resume_skills) < 3:
+        suggestions.append("Add more technical skills and tools to demonstrate your breadth of expertise.")
+
+    suggestions.append("Use quantifiable metrics in bullet points (e.g., 'improved performance by 30%').")
+    suggestions.append("Keep standard section headers (Experience, Skills, Education) for optimal ATS readability.")
+
+    # Radar chart skills (dynamically derived from analysis)
+    combined = matched[:4] + missing[:3]
+    if len(combined) < 5:
+        fallbacks = ["git", "linux", "sql", "python", "docker"]
+        for fb in fallbacks:
+            if fb not in combined:
+                combined.append(fb)
+            if len(combined) >= 5:
+                break
+
+    radar_labels = [s.title() for s in combined]
+    radar_values = [85 if s in resume_skills else 30 for s in combined]
 
     return {
         "resume_score": resume_score,
         "match_score": match_score,
-        "skills": merged_skills,
+        "skills": matched,
+        "all_resume_skills": resume_skills,
         "missing": missing,
-        "linkedin_profile": linkedin_profile,
-        "linkedin_skills": linkedin_skills,
-        "linkedin_suggestions": linkedin_suggestions[:6],
-        "linkedin_error": linkedin_error
+        "suggestions": suggestions,
+        "radar_labels": radar_labels,
+        "radar_values": radar_values
     }
